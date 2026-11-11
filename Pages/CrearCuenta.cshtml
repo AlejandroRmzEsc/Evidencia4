@@ -1,0 +1,104 @@
+@page
+@model CrearCuentaModel
+@{
+    ViewData["Title"] = "Crear cuenta";
+    Layout = null;
+    bool esEntrenador = Model.Cuenta.TipoCuenta == "ENTRENADOR";
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Torneo</title>
+    <link rel="icon" type="image/svg+xml" href="~/trophy.svg" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="login-body">
+    <main class="login">
+        <div class="login-box">
+
+            <div class="text-center mb-4">
+                <div class="login-icon"><i class="bi bi-person-plus"></i></div>
+                <h1>Crear cuenta</h1>
+                <p class="text-muted mb-0">Para jugadores y entrenadores registrados</p>
+            </div>
+
+            <!-- Aviso con el mensaje del SP -->
+            @if (Model.Mensaje != "")
+            {
+                <div class="alert alert-@Model.TipoMensaje">@Model.Mensaje</div>
+            }
+
+            <form method="post">
+                <!-- Tipo de cuenta: define el rol -->
+                <label class="form-label">Soy</label>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <input type="radio" class="btn-check" asp-for="Cuenta.TipoCuenta" value="JUGADOR" id="tipoJugador" />
+                        <label class="btn btn-outline-primary w-100 tipo-cuenta" for="tipoJugador">
+                            <i class="bi bi-person"></i> Jugador
+                            <small>Sólo consulta</small>
+                        </label>
+                    </div>
+                    <div class="col-6">
+                        <input type="radio" class="btn-check" asp-for="Cuenta.TipoCuenta" value="ENTRENADOR" id="tipoEntrenador" />
+                        <label class="btn btn-outline-primary w-100 tipo-cuenta" for="tipoEntrenador">
+                            <i class="bi bi-clipboard"></i> Entrenador
+                            <small>Gestiona todo</small>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Datos para identificar a la persona ya registrada -->
+                <div class="mb-3">
+                    <label asp-for="Cuenta.Dato" class="form-label" id="etiquetaDato">@(esEntrenador ? "Cédula profesional" : "Correo")</label>
+                    <input asp-for="Cuenta.Dato" class="form-control" maxlength="50" required
+                           placeholder="@(esEntrenador ? "Tu cédula registrada" : "Tu correo registrado")" />
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Cuenta.Telefono" class="form-label">Teléfono</label>
+                    <input asp-for="Cuenta.Telefono" type="tel" class="form-control" maxlength="15"
+                           pattern="[0-9]{10,15}" title="Sólo números, de 10 a 15 dígitos" placeholder="Tu teléfono registrado" required />
+                </div>
+
+                <hr class="my-4" />
+
+                <!-- Datos de acceso -->
+                <div class="mb-3">
+                    <label asp-for="Cuenta.Cuenta" class="form-label">Cuenta</label>
+                    <input asp-for="Cuenta.Cuenta" class="form-control" maxlength="30" autocomplete="username" required />
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Cuenta.Contrasenia" class="form-label">Contraseña</label>
+                    <input asp-for="Cuenta.Contrasenia" type="password" class="form-control" minlength="6" maxlength="30" autocomplete="new-password" required />
+                </div>
+                <div class="mb-4">
+                    <label asp-for="Confirmacion" class="form-label">Confirmar contraseña</label>
+                    <input asp-for="Confirmacion" type="password" class="form-control" minlength="6" maxlength="30" autocomplete="new-password" required />
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Crear cuenta</button>
+            </form>
+
+            <p class="text-muted small text-center mt-4 mb-0">
+                ¿Ya tienes cuenta? <a asp-page="/Login">Inicia sesión</a>
+            </p>
+        </div>
+    </main>
+
+    <script>
+        // Cambia la etiqueta del dato según el tipo de cuenta
+        document.querySelectorAll('input[name="Cuenta.TipoCuenta"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                var entrenador = this.value === 'ENTRENADOR';
+                document.getElementById('etiquetaDato').textContent = entrenador ? 'Cédula profesional' : 'Correo';
+                document.getElementById('Cuenta_Dato').placeholder = entrenador ? 'Tu cédula registrada' : 'Tu correo registrado';
+            });
+        });
+    </script>
+</body>
+</html>

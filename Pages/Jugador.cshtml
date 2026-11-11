@@ -1,0 +1,134 @@
+@page
+@model JugadorModel
+@{
+    ViewData["Title"] = "Jugador";
+}
+
+<div class="card">
+    <div class="card-header encabezado">
+        <h2 class="mt-1"><i class="bi bi-person me-2"></i>Jugadores</h2>
+    </div>
+    <div class="card-body">
+
+        <!-- Aviso con el mensaje del SP -->
+        @if (Model.Mensaje != "")
+        {
+            <div class="alert alert-@Model.TipoMensaje">@Model.Mensaje</div>
+        }
+
+        <!-- Formulario registrar / editar (sólo ADMINISTRADOR) -->
+        @if (Model.EsAdministrador)
+        {
+            <form method="post" asp-page-handler="Guardar" class="mb-4">
+                <input type="hidden" asp-for="Jugador.IdJugador" />
+
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label asp-for="Jugador.Nombre" class="form-label">Nombre</label>
+                        <input asp-for="Jugador.Nombre" class="form-control" maxlength="80" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="Jugador.PrimerApellido" class="form-label">Primer apellido</label>
+                        <input asp-for="Jugador.PrimerApellido" class="form-control" maxlength="80" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="Jugador.SegundoApellido" class="form-label">Segundo apellido</label>
+                        <input asp-for="Jugador.SegundoApellido" class="form-control" maxlength="80" />
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="Jugador.FechaNacimiento" class="form-label">Fecha de nacimiento</label>
+                        <input asp-for="Jugador.FechaNacimiento" type="date" class="form-control"
+                               max="@DateTime.Today.AddDays(-1).ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="Jugador.Correo" class="form-label">Correo</label>
+                        <input asp-for="Jugador.Correo" type="email" class="form-control" maxlength="50" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="Jugador.Telefono" class="form-label">Teléfono</label>
+                        <input asp-for="Jugador.Telefono" type="tel" class="form-control" maxlength="15"
+                               pattern="[0-9]{10,15}" title="Sólo números, de 10 a 15 dígitos" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Jugador.IdEquipo" class="form-label">Equipo</label>
+                        <select asp-for="Jugador.IdEquipo" class="form-select" required>
+                            <option value="">Selecciona un equipo</option>
+                            @foreach (DataRow equipo in Model.Equipos.Rows)
+                            {
+                                <option value="@equipo["Id"]">@equipo["Equipo"] (@equipo["Categoria"])</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary mt-3">
+                    @(Model.Jugador.IdJugador == 0 ? "Registrar" : "Guardar cambios")
+                </button>
+
+                @if (Model.Jugador.IdJugador != 0)
+                {
+                    <a asp-page="Jugador" class="btn btn-secondary mt-3">Cancelar</a>
+                }
+            </form>
+        }
+
+        <!-- Búsqueda por nombre, correo, teléfono o equipo -->
+        <form method="get" class="d-flex mb-3">
+            <input name="Buscar" value="@Model.Buscar" class="form-control me-2" placeholder="Buscar por nombre, correo, teléfono o equipo" />
+            <button type="submit" class="btn btn-outline-primary">Buscar</button>
+        </form>
+
+        <!-- Tabla de jugadores activos -->
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Jugador</th>
+                        <th>Equipo</th>
+                        <th>Categoría</th>
+                        <th>Nacimiento</th>
+                        <th>Edad</th>
+                        <th>Correo</th>
+                        <th>Teléfono</th>
+                        @if (Model.EsAdministrador)
+                        {
+                            <th></th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (DataRow fila in Model.Jugadores.Rows)
+                    {
+                        var id = fila["Id"];
+                        <tr>
+                            <td>@fila["Jugador"]</td>
+                            <td>@fila["Equipo"]</td>
+                            <td>@fila["Categoria"]</td>
+                            <td>@fila["FechaNacimiento"]</td>
+                            <td>@fila["Edad"]</td>
+                            <td>@fila["Correo"]</td>
+                            <td>@fila["Telefono"]</td>
+                            @if (Model.EsAdministrador)
+                            {
+                                <td class="text-nowrap">
+                                    <a asp-page-handler="Editar" asp-route-id="@id" class="btn btn-sm btn-warning rounded-circle"><i class="bi bi-pencil"></i></a>
+
+                                    <form method="post" asp-page-handler="Eliminar" asp-route-id="@id" class="d-inline"
+                                          onsubmit="return confirm('¿Dar de baja a este jugador?');">
+                                        <button type="submit" class="btn btn-sm btn-danger rounded-circle"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </td>
+                            }
+                        </tr>
+                    }
+                    @if (Model.Jugadores.Rows.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">No hay jugadores para mostrar</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

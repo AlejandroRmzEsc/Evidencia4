@@ -1,16 +1,19 @@
 ﻿using System.Data;
 using Microsoft.Data.SqlClient;
-namespace Proyecto.Datos
+
+namespace Evidencia4.Datos
 {
     public class bdConexion
     {
         private readonly string _cadena;
+
         // Lee la cadena "bdConexion" de appsettings.json
         public bdConexion(IConfiguration config)
         {
             _cadena = config.GetConnectionString("bdConexion")
-            ?? throw new Exception("No se encontró la cadena de conexión 'bdConexion' enappsettings.json");
+                ?? throw new Exception("No se encontró la cadena de conexión 'bdConexion' en appsettings.json");
         }
+
         // Ejecuta un SP y regresa lo que devuelve en un DataTable
         public DataTable EjecutarStoredProcedure(string nombreSP, SqlParameter[] parametros)
         {

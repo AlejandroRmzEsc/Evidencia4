@@ -1,28 +1,58 @@
-var builder = WebApplication.CreateBuilder(args);
+using Evidencia4.Datos;
+using Evidencia4.Logica;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
-// Add services to the container.
-builder.Services.AddRazorPages(option =>
+namespace Evidencia4
 {
-    option.Conventions.AddPageRoute("/Login", "");
-});
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            var builder = WebApplication.CreateBuilder(args);
 
-var app = builder.Build();
+            // Todas las páginas piden sesión, menos el Login, Crear cuenta y la página de error
+            builder.Services.AddRazorPages(options =>
+            {
+                options.Conventions.AuthorizeFolder("/");
+                options.Conventions.AllowAnonymousToPage("/Login");
+                options.Conventions.AllowAnonymousToPage("/CrearCuenta");
+                options.Conventions.AllowAnonymousToPage("/Error");
+            });
 
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+            // Sesión con cookie: si no hay sesión manda al Login
+            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(options =>
+                {
+                    options.LoginPath = "/Login";
+                    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+                });
+
+            // Conexión y lógica
+            builder.Services.AddScoped<bdConexion>();
+            builder.Services.AddScoped<logicaUsuario>();
+            builder.Services.AddScoped<logicaJugador>();
+            builder.Services.AddScoped<logicaEntrenador>();
+            builder.Services.AddScoped<logicaEquipo>();
+
+            var app = builder.Build();
+
+            if (!app.Environment.IsDevelopment())
+            {
+                app.UseExceptionHandler("/Error");
+                app.UseHsts();
+            }
+
+            app.UseHttpsRedirection();
+            app.UseStaticFiles();
+
+            app.UseRouting();
+
+            app.UseAuthentication();
+            app.UseAuthorization();
+
+            app.MapRazorPages();
+
+            app.Run();
+        }
+    }
 }
-
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-
-app.UseRouting();
-
-app.UseAuthorization();
-
-app.MapRazorPages();
-
-app.Run();

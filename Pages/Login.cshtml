@@ -1,25 +1,53 @@
 ﻿@page
-@model Evidencia4.Pages.LoginModel
+@model LoginModel
 @{
-    ViewData["Title"] = "Iniciar Sesión";
+    ViewData["Title"] = "Iniciar sesión";
     Layout = null;
 }
 
 <!DOCTYPE html>
 <html lang="es">
-    <head>
-        <title>Login</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link href="~/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" rel="stylesheet" />
-        <link href="~/lib/bootstrap/dist/css/bootstrap.rtl.css" rel="stylesheet" />
-        <link href="~/lib/bootstrap/dist/css/bootstrap.css" rel="stylesheet" />
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-        <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700&display=swap" rel="stylesheet">
-        <link href="~/css/login.css" rel="stylesheet" />
-    </head> 
-    <body>
-            
-    </body>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Torneo</title>
+    <link rel="icon" type="image/svg+xml" href="~/trophy.svg" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="login-body">
+    <main class="login">
+        <div class="login-box">
+
+            <div class="text-center mb-4">
+                <div class="login-icon"><i class="bi bi-trophy"></i></div>
+                <h1>Torneo</h1>
+                <p class="text-muted mb-0">Asociación de futbol</p>
+            </div>
+
+            <!-- Aviso con el mensaje del SP -->
+            @if (Model.Mensaje != "")
+            {
+                <div class="alert alert-@Model.TipoMensaje">@Model.Mensaje</div>
+            }
+
+            <form method="post">
+                <div class="mb-3">
+                    <label asp-for="Cuenta" class="form-label">Cuenta</label>
+                    <input asp-for="Cuenta" class="form-control" maxlength="30" autocomplete="username" required autofocus />
+                </div>
+                <div class="mb-4">
+                    <label asp-for="Contrasenia" class="form-label">Contraseña</label>
+                    <input asp-for="Contrasenia" type="password" class="form-control" maxlength="30" autocomplete="current-password" required />
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Iniciar sesión</button>
+            </form>
+
+            <p class="text-muted small text-center mt-4 mb-2">La cuenta y la contraseña distinguen mayúsculas y minúsculas.</p>
+            <p class="small text-center mb-0">¿No tienes cuenta? <a asp-page="/CrearCuenta">Crear cuenta</a></p>
+        </div>
+    </main>
+</body>
 </html>
