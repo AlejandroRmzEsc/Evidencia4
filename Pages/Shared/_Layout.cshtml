@@ -14,38 +14,34 @@
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light barra mb-3">
             <div class="container">
-                <a class="navbar-brand" asp-area="" asp-page="/Index"><i class="bi bi-trophy me-1"></i>Torneo</a>
+                <a class="navbar-brand" asp-area="" asp-page="/Inicio"><i class="bi bi-trophy me-1"></i>Torneo</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    @if (User.Identity?.IsAuthenticated == true)
-                    {
-                        <ul class="navbar-nav flex-grow-1">
-                            <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-page="/Index">Inicio</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-page="/Jugador">Jugadores</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-area="" asp-page="/Entrenador">Entrenadores</a>
-                            </li>
-                        </ul>
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-page="/Inicio">Inicio</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-page="/Jugador">Jugadores</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-page="/Entrenador">Entrenadores</a>
+                        </li>
+                    </ul>
 
+                    @if (Context.Session.GetInt32("IdUsuario") != null)
+                    {
                         <!-- Usuario en sesión y su rol -->
-                        <div class="d-flex align-items-center">
-                            <span class="me-3 text-muted">
-                                <i class="bi bi-person-circle me-1"></i>@User.Identity.Name
-                                <span class="badge rol ms-1">@(User.IsInRole("ADMINISTRADOR") ? "ADMINISTRADOR" : "OBSERVADOR")</span>
-                            </span>
-                            <form method="post" asp-page="/Login" asp-page-handler="Salir" class="m-0">
-                                <button type="submit" class="btn btn-sm btn-outline-secondary">
-                                    <i class="bi bi-box-arrow-right me-1"></i>Salir
-                                </button>
-                            </form>
-                        </div>
+                        <span class="navbar-text me-3">
+                            <i class="bi bi-person-circle me-1"></i>@Context.Session.GetString("Cuenta")
+                            <span class="badge rol ms-1">@Context.Session.GetString("Rol")</span>
+                        </span>
+                        <a class="btn btn-sm btn-outline-secondary" asp-page="/Login" asp-page-handler="Salir">
+                            <i class="bi bi-box-arrow-right me-1"></i>Salir
+                        </a>
                     }
                 </div>
             </div>

@@ -1,11 +1,7 @@
-using System.Data;
-using System.Security.Claims;
-using Evidencia4.Logica;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Data.SqlClient;
+using Evidencia4.Entidades;
+using Evidencia4.Logica;
 
 namespace Evidencia4.Pages
 {
@@ -18,70 +14,56 @@ namespace Evidencia4.Pages
             _logica = logica;
         }
 
+        // Datos del formulario
         [BindProperty]
-        public string Cuenta { get; set; } = "";
-
-        [BindProperty]
-        public string Contrasenia { get; set; } = "";
+        public bdUsuario Usuario { get; set; } = new bdUsuario();
 
         public string Mensaje { get; set; } = "";
         public string TipoMensaje { get; set; } = "";
 
-        // Siempre muestra el acceso: si había una sesión abierta se cierra
-        public async Task OnGetAsync()
+        // Al abrir el Login
+        public IActionResult OnGet()
         {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            // Si ya inició sesión, lo manda directo al inicio
+            if (HttpContext.Session.GetInt32("IdUsuario") != null)
+                return RedirectToPage("/Inicio");
+
+            return Page();
         }
 
-        // Iniciar sesión
-        public async Task<IActionResult> OnPostAsync()
+        // Botón Iniciar sesión
+        public IActionResult OnPost()
         {
-            DataTable dt;
             try
             {
-                // El SP valida mayúsculas/minúsculas y que el usuario esté ACTIVO
-                dt = _logica.IniciarSesion(Cuenta, Contrasenia);
+                bdUsuario? u = _logica.IniciarSesion(Usuario, out bdRespuesta r);
+
+                if (u != null)
+                {
+                    // Guardar los datos en la sesión
+                    HttpContext.Session.SetInt32("IdUsuario", u.IdUsuario);
+                    HttpContext.Session.SetString("Cuenta", u.Cuenta ?? "");
+                    HttpContext.Session.SetString("Rol", u.Rol ?? "");
+
+                    return RedirectToPage("/Inicio");
+                }
+
+                // Cuenta o contraseña incorrectas, o usuario INACTIVO (mensaje del SP)
+                Mensaje = r.Mensaje;
+                TipoMensaje = r.TipoMensaje;
             }
-            catch (SqlException)
+            catch (Exception ex)
             {
-                Mensaje = "No fue posible conectar con la base de datos";
+                Mensaje = "Error: " + ex.Message;
                 TipoMensaje = "danger";
-                return Page();
             }
-
-            // Si el SP no regresa nada, la base no tiene la versión actual de spUsuario
-            if (dt.Rows.Count == 0 || !dt.Columns.Contains("TipoMensaje"))
-            {
-                Mensaje = "La base de datos no respondió al inicio de sesión. Ejecuta el script BaseDatos/DBTORNEO.sql";
-                TipoMensaje = "danger";
-                return Page();
-            }
-
-            DataRow fila = dt.Rows[0];
-            if (fila["TipoMensaje"].ToString() != "success")
-            {
-                Mensaje = fila["Mensaje"].ToString() ?? "";
-                TipoMensaje = fila["TipoMensaje"].ToString() ?? "";
-                return Page();
-            }
-
-            // Datos que se guardan en la cookie de sesión
-            List<Claim> claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, fila["IdUsuario"].ToString() ?? ""),
-                new Claim(ClaimTypes.Name, fila["Cuenta"].ToString() ?? ""),
-                new Claim(ClaimTypes.Role, fila["Rol"].ToString() ?? "")
-            };
-            ClaimsIdentity identidad = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identidad));
-
-            return RedirectToPage("/Index");
+            return Page();
         }
 
-        // Cerrar sesión
-        public async Task<IActionResult> OnPostSalirAsync()
+        // Cerrar sesión: /Login?handler=Salir
+        public IActionResult OnGetSalir()
         {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            HttpContext.Session.Clear();
             return RedirectToPage("/Login");
         }
     }

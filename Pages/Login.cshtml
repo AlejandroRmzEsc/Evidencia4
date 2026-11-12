@@ -34,12 +34,12 @@
 
             <form method="post">
                 <div class="mb-3">
-                    <label asp-for="Cuenta" class="form-label">Cuenta</label>
-                    <input asp-for="Cuenta" class="form-control" maxlength="30" autocomplete="username" required autofocus />
+                    <label class="form-label" for="txtCuenta">Cuenta</label>
+                    <input id="txtCuenta" asp-for="Usuario.Cuenta" class="form-control" maxlength="30" autocomplete="username" required autofocus />
                 </div>
                 <div class="mb-4">
-                    <label asp-for="Contrasenia" class="form-label">Contraseña</label>
-                    <input asp-for="Contrasenia" type="password" class="form-control" maxlength="30" autocomplete="current-password" required />
+                    <label class="form-label" for="txtContrasenia">Contraseña</label>
+                    <input id="txtContrasenia" asp-for="Usuario.Contrasenia" type="password" class="form-control" maxlength="30" autocomplete="current-password" required />
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100">Iniciar sesión</button>

@@ -1,8 +1,6 @@
-using Microsoft.AspNetCore.Mvc.RazorPages;
-
 namespace Evidencia4.Pages
 {
-    public class IndexModel : PageModel
+    public class InicioModel : PaginaProtegida
     {
         public void OnGet()
         {

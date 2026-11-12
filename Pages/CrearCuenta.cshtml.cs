@@ -1,7 +1,7 @@
-using Evidencia4.Entidades;
-using Evidencia4.Logica;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Evidencia4.Entidades;
+using Evidencia4.Logica;
 
 namespace Evidencia4.Pages
 {
@@ -14,6 +14,7 @@ namespace Evidencia4.Pages
             _logica = logica;
         }
 
+        // Datos del formulario
         [BindProperty]
         public bdCuenta Cuenta { get; set; } = new bdCuenta { TipoCuenta = "JUGADOR" };
 
@@ -27,27 +28,38 @@ namespace Evidencia4.Pages
         {
         }
 
-        // Crear la cuenta (el SP valida que la persona exista y le asigna su rol)
-        public void OnPost()
+        // Botón Crear cuenta (el SP valida que la persona exista y le asigna su rol)
+        public IActionResult OnPost()
         {
-            if (Cuenta.Contrasenia != Confirmacion)
+            try
             {
-                Mensaje = "Las contraseñas no coinciden";
-                TipoMensaje = "warning";
-                return;
+                if (Cuenta.Contrasenia != Confirmacion)
+                {
+                    Mensaje = "Las contraseñas no coinciden";
+                    TipoMensaje = "warning";
+                    return Page();
+                }
+
+                bdRespuesta r = _logica.CrearCuenta(Cuenta);
+                Mensaje = r.Mensaje;
+                TipoMensaje = r.TipoMensaje;
+
+                if (r.TipoMensaje == "success")
+                    Limpiar();
             }
-
-            bdRespuesta respuesta = _logica.CrearCuenta(Cuenta);
-            Mensaje = respuesta.Mensaje;
-            TipoMensaje = respuesta.TipoMensaje;
-
-            // Si se creó se limpia el formulario
-            if (TipoMensaje == "success")
+            catch (Exception ex)
             {
-                ModelState.Clear();
-                Cuenta = new bdCuenta { TipoCuenta = "JUGADOR" };
-                Confirmacion = null;
+                Mensaje = "Error: " + ex.Message;
+                TipoMensaje = "danger";
             }
+            return Page();
+        }
+
+        private void Limpiar()
+        {
+            ModelState.Clear();
+            Cuenta = new bdCuenta { TipoCuenta = "JUGADOR" };
+            Confirmacion = null;
         }
     }
 }

@@ -1,5 +1,5 @@
-﻿@page
-@model IndexModel
+@page
+@model InicioModel
 @{
     ViewData["Title"] = "Inicio";
 }
@@ -14,7 +14,7 @@
 
                 <p>
                     Asociación de futbol con ASP .NET Razor Pages y SQL Server.
-                    @if (User.IsInRole("ADMINISTRADOR"))
+                    @if (Model.EsAdministrador)
                     {
                         <text>Como administrador puedes registrar, editar y dar de baja.</text>
                     }

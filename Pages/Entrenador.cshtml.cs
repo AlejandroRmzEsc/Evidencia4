@@ -1,22 +1,20 @@
-using System.Data;
-using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Evidencia4.Entidades;
 using Evidencia4.Logica;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Data.SqlClient;
+using System.Data;
 
 namespace Evidencia4.Pages
 {
-    public class EntrenadorModel : PageModel
+    public class EntrenadorModel : PaginaProtegida
     {
         private readonly logicaEntrenador _logica;
-        private readonly logicaEquipo _logicaEquipo;
+        private readonly logicaCatalogos _catalogo;
 
-        public EntrenadorModel(logicaEntrenador logica, logicaEquipo logicaEquipo)
+        public EntrenadorModel(logicaEntrenador logica, logicaCatalogos catalogo)
         {
             _logica = logica;
-            _logicaEquipo = logicaEquipo;
+            _catalogo = catalogo;
         }
 
         [BindProperty]
@@ -26,25 +24,20 @@ namespace Evidencia4.Pages
         public string? Buscar { get; set; }
 
         public DataTable Entrenadores { get; set; } = new DataTable();
-        public DataTable Equipos { get; set; } = new DataTable();
-
+        public List<SelectListItem> Equipo { get; set; } = new List<SelectListItem>();
         public string Mensaje { get; set; } = "";
         public string TipoMensaje { get; set; } = "";
-
-        // Sólo el ADMINISTRADOR puede registrar, editar y eliminar
-        public bool EsAdministrador => User.IsInRole("ADMINISTRADOR");
 
         public void OnGet()
         {
             Cargar();
         }
 
-        // Carga el entrenador seleccionado en el formulario
         public void OnGetEditar(int id)
         {
-            if (EsAdministrador)
+            try
             {
-                try
+                if (EsAdministrador)
                 {
                     bdEntrenador? entrenador = _logica.Obtener(id);
                     if (entrenador != null)
@@ -57,80 +50,91 @@ namespace Evidencia4.Pages
                         TipoMensaje = "warning";
                     }
                 }
-                catch (SqlException)
+                else
                 {
-                    Mensaje = "No fue posible conectar con la base de datos";
-                    TipoMensaje = "danger";
+                    SinPermiso();
                 }
             }
-            else
+            catch (Exception ex)
             {
-                SinPermiso();
+                Mensaje = "Error: " + ex.Message;
+                TipoMensaje = "danger";
             }
-
             Cargar();
         }
 
-        // Registrar o modificar
-        public void OnPostGuardar()
+        public IActionResult OnPostGuardar()
         {
-            if (EsAdministrador)
+            try
             {
-                bdRespuesta respuesta = _logica.Guardar(Entrenador, IdUsuarioSesion());
-                Mensaje = respuesta.Mensaje;
-                TipoMensaje = respuesta.TipoMensaje;
-
-                // Si se guardó se limpia el formulario
-                if (TipoMensaje == "success")
+                if (EsAdministrador)
                 {
-                    ModelState.Clear();
-                    Entrenador = new bdEntrenador();
+                    bdRespuesta r = _logica.Guardar(Entrenador, IdUsuarioSesion);
+                    Mensaje = r.Mensaje;
+                    TipoMensaje = r.TipoMensaje;
+
+                    if (r.TipoMensaje == "success")
+                        Limpiar();
+                }
+                else
+                {
+                    SinPermiso();
                 }
             }
-            else
+            catch (Exception ex)
             {
-                SinPermiso();
+                Mensaje = "Error: " + ex.Message;
+                TipoMensaje = "danger";
             }
-
             Cargar();
+            return Page();
         }
 
-        // Baja lógica
-        public void OnPostEliminar(int id)
+        public IActionResult OnPostEliminar(int id)
         {
-            if (EsAdministrador)
+            try
             {
-                bdRespuesta respuesta = _logica.Eliminar(id, IdUsuarioSesion());
-                Mensaje = respuesta.Mensaje;
-                TipoMensaje = respuesta.TipoMensaje;
-            }
-            else
-            {
-                SinPermiso();
-            }
+                if (EsAdministrador)
+                {
+                    bdRespuesta r = _logica.Eliminar(id, IdUsuarioSesion);
+                    Mensaje = r.Mensaje;
+                    TipoMensaje = r.TipoMensaje;
 
+                    if (r.TipoMensaje == "success")
+                        Limpiar();
+                }
+                else
+                {
+                    SinPermiso();
+                }
+            }
+            catch (Exception ex)
+            {
+                Mensaje = "Error: " + ex.Message;
+                TipoMensaje = "danger";
+            }
             Cargar();
+            return Page();
         }
 
-        // Llena la tabla y el combo de equipos
         private void Cargar()
         {
             try
             {
                 Entrenadores = _logica.Consultar(Buscar);
-                Equipos = _logicaEquipo.Consultar();
+                Equipo = _catalogo.ddlEquipo();
             }
-            catch (SqlException)
+            catch (Exception ex)
             {
-                Mensaje = "No fue posible conectar con la base de datos";
+                Mensaje = "Error: " + ex.Message;
                 TipoMensaje = "danger";
             }
         }
 
-        // Id del usuario en sesión (se guarda en los campos de auditoría)
-        private int IdUsuarioSesion()
+        private void Limpiar()
         {
-            return Convert.ToInt32(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            ModelState.Clear();
+            Entrenador = new bdEntrenador();
         }
 
         private void SinPermiso()

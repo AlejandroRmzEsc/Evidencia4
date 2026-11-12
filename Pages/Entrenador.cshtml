@@ -23,41 +23,40 @@
                 <input type="hidden" asp-for="Entrenador.IdEntrenador" />
 
                 <div class="row g-2">
+
+                    <!-- DROP DOWN LIST de equipos -->
                     <div class="col-md-4">
-                        <label asp-for="Entrenador.Nombre" class="form-label">Nombre</label>
-                        <input asp-for="Entrenador.Nombre" class="form-control" maxlength="80" required />
+                        <label asp-for="Entrenador.IdEquipo" class="form-label">Equipo</label>
+                        <select asp-for="Entrenador.IdEquipo" asp-items="Model.Equipo" class="form-select" required>
+                            <option value="">Seleccione...</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label" for="txtNombre">Nombre</label>
+                        <input id="txtNombre" asp-for="Entrenador.Nombre" class="form-control" maxlength="80" required />
                     </div>
                     <div class="col-md-4">
-                        <label asp-for="Entrenador.PrimerApellido" class="form-label">Primer apellido</label>
-                        <input asp-for="Entrenador.PrimerApellido" class="form-control" maxlength="80" required />
+                        <label class="form-label" for="txtPrimerApellido">Primer apellido</label>
+                        <input id="txtPrimerApellido" asp-for="Entrenador.PrimerApellido" class="form-control" maxlength="80" required />
                     </div>
                     <div class="col-md-4">
-                        <label asp-for="Entrenador.SegundoApellido" class="form-label">Segundo apellido</label>
-                        <input asp-for="Entrenador.SegundoApellido" class="form-control" maxlength="80" />
+                        <label class="form-label" for="txtSegundoApellido">Segundo apellido</label>
+                        <input id="txtSegundoApellido" asp-for="Entrenador.SegundoApellido" class="form-control" maxlength="80" />
                     </div>
                     <div class="col-md-4">
-                        <label asp-for="Entrenador.FechaNacimiento" class="form-label">Fecha de nacimiento</label>
-                        <input asp-for="Entrenador.FechaNacimiento" type="date" class="form-control"
+                        <label class="form-label" for="txtFechaNacimiento">Fecha de nacimiento</label>
+                        <input id="txtFechaNacimiento" asp-for="Entrenador.FechaNacimiento" type="date" class="form-control"
                                max="@DateTime.Today.AddDays(-1).ToString("yyyy-MM-dd")" required />
                     </div>
                     <div class="col-md-4">
-                        <label asp-for="Entrenador.Cedula" class="form-label">Cédula</label>
-                        <input asp-for="Entrenador.Cedula" class="form-control" maxlength="50" required />
-                    </div>
-                    <div class="col-md-4">
-                        <label asp-for="Entrenador.Telefono" class="form-label">Teléfono</label>
-                        <input asp-for="Entrenador.Telefono" type="tel" class="form-control" maxlength="15"
+                        <label class="form-label" for="txtTelefono">Teléfono</label>
+                        <input id="txtTelefono" asp-for="Entrenador.Telefono" type="tel" class="form-control" maxlength="15"
                                pattern="[0-9]{10,15}" title="Sólo números, de 10 a 15 dígitos" required />
                     </div>
-                    <div class="col-md-6">
-                        <label asp-for="Entrenador.IdEquipo" class="form-label">Equipo</label>
-                        <select asp-for="Entrenador.IdEquipo" class="form-select" required>
-                            <option value="">Selecciona un equipo</option>
-                            @foreach (DataRow equipo in Model.Equipos.Rows)
-                            {
-                                <option value="@equipo["Id"]">@equipo["Equipo"] (@equipo["Categoria"])</option>
-                            }
-                        </select>
+                    <div class="col-md-8">
+                        <label class="form-label" for="txtCedula">Cédula</label>
+                        <input id="txtCedula" asp-for="Entrenador.Cedula" class="form-control" maxlength="50" required />
                     </div>
                 </div>
 

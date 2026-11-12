@@ -55,13 +55,13 @@
 
                 <!-- Datos para identificar a la persona ya registrada -->
                 <div class="mb-3">
-                    <label asp-for="Cuenta.Dato" class="form-label" id="etiquetaDato">@(esEntrenador ? "Cédula profesional" : "Correo")</label>
-                    <input asp-for="Cuenta.Dato" class="form-control" maxlength="50" required
+                    <label class="form-label" for="txtDato" id="etiquetaDato">@(esEntrenador ? "Cédula profesional" : "Correo")</label>
+                    <input id="txtDato" asp-for="Cuenta.Dato" class="form-control" maxlength="50" required
                            placeholder="@(esEntrenador ? "Tu cédula registrada" : "Tu correo registrado")" />
                 </div>
                 <div class="mb-3">
-                    <label asp-for="Cuenta.Telefono" class="form-label">Teléfono</label>
-                    <input asp-for="Cuenta.Telefono" type="tel" class="form-control" maxlength="15"
+                    <label class="form-label" for="txtTelefono">Teléfono</label>
+                    <input id="txtTelefono" asp-for="Cuenta.Telefono" type="tel" class="form-control" maxlength="15"
                            pattern="[0-9]{10,15}" title="Sólo números, de 10 a 15 dígitos" placeholder="Tu teléfono registrado" required />
                 </div>
 
@@ -69,16 +69,16 @@
 
                 <!-- Datos de acceso -->
                 <div class="mb-3">
-                    <label asp-for="Cuenta.Cuenta" class="form-label">Cuenta</label>
-                    <input asp-for="Cuenta.Cuenta" class="form-control" maxlength="30" autocomplete="username" required />
+                    <label class="form-label" for="txtCuenta">Cuenta</label>
+                    <input id="txtCuenta" asp-for="Cuenta.Cuenta" class="form-control" maxlength="30" autocomplete="username" required />
                 </div>
                 <div class="mb-3">
-                    <label asp-for="Cuenta.Contrasenia" class="form-label">Contraseña</label>
-                    <input asp-for="Cuenta.Contrasenia" type="password" class="form-control" minlength="6" maxlength="30" autocomplete="new-password" required />
+                    <label class="form-label" for="txtContrasenia">Contraseña</label>
+                    <input id="txtContrasenia" asp-for="Cuenta.Contrasenia" type="password" class="form-control" minlength="6" maxlength="30" autocomplete="new-password" required />
                 </div>
                 <div class="mb-4">
-                    <label asp-for="Confirmacion" class="form-label">Confirmar contraseña</label>
-                    <input asp-for="Confirmacion" type="password" class="form-control" minlength="6" maxlength="30" autocomplete="new-password" required />
+                    <label class="form-label" for="txtConfirmacion">Confirmar contraseña</label>
+                    <input id="txtConfirmacion" asp-for="Confirmacion" type="password" class="form-control" minlength="6" maxlength="30" autocomplete="new-password" required />
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100">Crear cuenta</button>
@@ -96,7 +96,7 @@
             radio.addEventListener('change', function () {
                 var entrenador = this.value === 'ENTRENADOR';
                 document.getElementById('etiquetaDato').textContent = entrenador ? 'Cédula profesional' : 'Correo';
-                document.getElementById('Cuenta_Dato').placeholder = entrenador ? 'Tu cédula registrada' : 'Tu correo registrado';
+                document.getElementById('txtDato').placeholder = entrenador ? 'Tu cédula registrada' : 'Tu correo registrado';
             });
         });
     </script>

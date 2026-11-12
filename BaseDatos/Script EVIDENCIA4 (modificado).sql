@@ -1422,3 +1422,49 @@ BEGIN
 END
 GO
 
+
+-- [CAMBIO] spCatalogos (nuevo)
+-- Listas para los combos (ddl) de la app. Regresa siempre IdCatalogo y Descripcion
+CREATE OR ALTER PROCEDURE spCatalogos (
+    @Accion     INT = NULL,
+    @IdFiltro   INT = NULL
+)
+AS
+BEGIN
+    -- 1. Equipos activos con su categoría (se puede filtrar por IdCategoria)
+    IF @Accion = 1
+    BEGIN
+        SELECT E.IdEquipo AS IdCatalogo,
+               UPPER(E.Nombre) + ' (' + C.Descripcion + ')' AS Descripcion
+        FROM EQUIPO E
+        INNER JOIN CATEGORIA C ON C.IdCategoria = E.IdCategoria
+        WHERE E.IdEstatus = 1
+        AND (E.IdCategoria = @IdFiltro OR @IdFiltro IS NULL)
+        ORDER BY E.Nombre
+    END
+
+    -- 2. Categorías
+    IF @Accion = 2
+    BEGIN
+        SELECT IdCategoria AS IdCatalogo, Descripcion
+        FROM CATEGORIA
+        ORDER BY IdCategoria
+    END
+
+    -- 3. Estadios
+    IF @Accion = 3
+    BEGIN
+        SELECT IdEstadio AS IdCatalogo, Descripcion
+        FROM ESTADIO
+        ORDER BY Descripcion
+    END
+
+    -- 4. Tipos de equipo (LOCAL / VISITANTE)
+    IF @Accion = 4
+    BEGIN
+        SELECT IdTipoEquipo AS IdCatalogo, Descripcion
+        FROM TIPO_EQUIPO
+        ORDER BY IdTipoEquipo
+    END
+END
+GO

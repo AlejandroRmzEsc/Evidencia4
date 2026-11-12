@@ -1,6 +1,5 @@
 using Evidencia4.Datos;
 using Evidencia4.Logica;
-using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace Evidencia4
 {
@@ -10,32 +9,31 @@ namespace Evidencia4
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Todas las páginas piden sesión, menos el Login, Crear cuenta y la página de error
+            // El Login es la página inicial del sitio
             builder.Services.AddRazorPages(options =>
             {
-                options.Conventions.AuthorizeFolder("/");
-                options.Conventions.AllowAnonymousToPage("/Login");
-                options.Conventions.AllowAnonymousToPage("/CrearCuenta");
-                options.Conventions.AllowAnonymousToPage("/Error");
+                options.Conventions.AddPageRoute("/Login", "");
             });
 
-            // Sesión con cookie: si no hay sesión manda al Login
-            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-                .AddCookie(options =>
-                {
-                    options.LoginPath = "/Login";
-                    options.ExpireTimeSpan = TimeSpan.FromHours(8);
-                });
+            // Sesión donde se guardan IdUsuario, Cuenta y Rol al iniciar sesión
+            builder.Services.AddSession(options =>
+            {
+                options.IdleTimeout = TimeSpan.FromMinutes(20);
+                options.Cookie.HttpOnly = true;
+                options.Cookie.IsEssential = true;
+            });
 
-            // Conexión y lógica
+            // Add services to the container.
+            builder.Services.AddRazorPages();
             builder.Services.AddScoped<bdConexion>();
             builder.Services.AddScoped<logicaUsuario>();
             builder.Services.AddScoped<logicaJugador>();
             builder.Services.AddScoped<logicaEntrenador>();
-            builder.Services.AddScoped<logicaEquipo>();
+            builder.Services.AddScoped<logicaCatalogos>();
 
             var app = builder.Build();
 
+            // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Error");
@@ -47,8 +45,9 @@ namespace Evidencia4
 
             app.UseRouting();
 
-            app.UseAuthentication();
             app.UseAuthorization();
+
+            app.UseSession();
 
             app.MapRazorPages();
 
