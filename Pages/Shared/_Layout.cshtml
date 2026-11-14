@@ -12,9 +12,25 @@
 </head>
 <body>
     <header>
+        @{
+            // Determinamos a dónde debe llevar el logo según el rol en sesión
+            var rolMenu = Context.Session.GetString("Rol");
+            var paginaLogo = "/Login";
+
+            if (rolMenu == "ADMINISTRADOR")
+            {
+                paginaLogo = "/Entrenador";
+            }
+            else if (rolMenu == "OBSERVADOR")
+            {
+                paginaLogo = "/Jugador";
+            }
+        }
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light barra mb-3">
             <div class="container">
-                <a class="navbar-brand" asp-area="" asp-page="/Jugador"><i class="bi bi-trophy me-1"></i>Torneo</a>
+                <!-- El logo ahora apunta dinámicamente a la página del usuario -->
+                <a class="navbar-brand" asp-area="" asp-page="@paginaLogo"><i class="bi bi-trophy me-1"></i>Torneo</a>
+
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -31,7 +47,6 @@
 
                     @if (Context.Session.GetInt32("IdUsuario") != null)
                     {
-                        <!-- Usuario en sesión y su rol -->
                         <span class="navbar-text me-3">
                             <i class="bi bi-person-circle me-1"></i>@Context.Session.GetString("Cuenta")
                             <span class="badge rol ms-1">@Context.Session.GetString("Rol")</span>
@@ -49,12 +64,6 @@
             @RenderBody()
         </main>
     </div>
-
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - Sistema de Torneo
-        </div>
-    </footer>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>

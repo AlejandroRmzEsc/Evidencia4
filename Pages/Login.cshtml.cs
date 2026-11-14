@@ -14,24 +14,23 @@ namespace Evidencia4.Pages
             _logica = logica;
         }
 
-        // Datos del formulario
         [BindProperty]
         public bdUsuario Usuario { get; set; } = new bdUsuario();
 
         public string Mensaje { get; set; } = "";
         public string TipoMensaje { get; set; } = "";
 
-        // Al abrir el Login
         public IActionResult OnGet()
         {
-            // Si ya inició sesión, lo manda directo al inicio
+            // Si ya tiene sesión, lo redirigimos según su rol
             if (HttpContext.Session.GetInt32("IdUsuario") != null)
-                return RedirectToPage("/Inicio");
-
+            {
+                string rolActual = (HttpContext.Session.GetString("Rol") ?? "").Trim().ToUpper();
+                return RedireccionarPorRol(rolActual);
+            }
             return Page();
         }
 
-        // Botón Iniciar sesión
         public IActionResult OnPost()
         {
             try
@@ -40,15 +39,17 @@ namespace Evidencia4.Pages
 
                 if (u != null)
                 {
-                    // Guardar los datos en la sesión
+                    string rolLimpio = (u.Rol ?? "").Trim().ToUpper();
+
+                    // Guardamos la sesión
                     HttpContext.Session.SetInt32("IdUsuario", u.IdUsuario);
                     HttpContext.Session.SetString("Cuenta", u.Cuenta ?? "");
-                    HttpContext.Session.SetString("Rol", u.Rol ?? "");
+                    HttpContext.Session.SetString("Rol", rolLimpio);
 
-                    return RedirectToPage("/Inicio");
+                    // Lo mandamos a su pestaña
+                    return RedireccionarPorRol(rolLimpio);
                 }
 
-                // Cuenta o contraseña incorrectas, o usuario INACTIVO (mensaje del SP)
                 Mensaje = r.Mensaje;
                 TipoMensaje = r.TipoMensaje;
             }
@@ -60,11 +61,30 @@ namespace Evidencia4.Pages
             return Page();
         }
 
-        // Cerrar sesión: /Login?handler=Salir
         public IActionResult OnGetSalir()
         {
             HttpContext.Session.Clear();
             return RedirectToPage("/Login");
+        }
+
+        // Método auxiliar para no repetir código
+        private IActionResult RedireccionarPorRol(string rol)
+        {
+            if (rol == "ADMINISTRADOR")
+            {
+                return RedirectToPage("/Entrenador");
+            }
+            else if (rol == "OBSERVADOR")
+            {
+                return RedirectToPage("/Jugador");
+            }
+            else
+            {
+                HttpContext.Session.Clear();
+                Mensaje = "Tu rol no tiene una página asignada.";
+                TipoMensaje = "warning";
+                return Page();
+            }
         }
     }
 }

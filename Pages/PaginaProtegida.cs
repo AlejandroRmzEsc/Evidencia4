@@ -3,22 +3,21 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Evidencia4.Pages
 {
-    // Las páginas que hereden de esta clase solo se abren con sesión iniciada
     public class PaginaProtegida : PageModel
     {
         public override void OnPageHandlerExecuting(PageHandlerExecutingContext context)
         {
-            // Si no hay IdUsuario en la sesión, lo manda al Login
+            // Solo validamos que exista la sesión. Si no hay, va al Login.
+            // (Ya no bloqueamos el paso entre /Entrenador y /Jugador)
             if (HttpContext.Session.GetInt32("IdUsuario") == null)
             {
                 context.Result = RedirectToPage("/Login");
             }
         }
 
-        // Id del usuario en sesión (se guarda en los campos de auditoría)
         public int IdUsuarioSesion => HttpContext.Session.GetInt32("IdUsuario") ?? 0;
 
-        // Sólo el ADMINISTRADOR puede registrar, editar y eliminar; el OBSERVADOR sólo consulta
+        // Esta línea es la que controla que solo el ADMIN vea los botones de Guardar/Editar/Eliminar en tus vistas
         public bool EsAdministrador => HttpContext.Session.GetString("Rol") == "ADMINISTRADOR";
     }
 }
