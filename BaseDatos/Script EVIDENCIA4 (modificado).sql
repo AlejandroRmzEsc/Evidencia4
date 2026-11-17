@@ -1,15 +1,10 @@
 ﻿/* =====================================================================
    DBTORNEO - Evidencia 4
-   Reglas principales: PDF de la Evidencia 4 (login sensible a mayúsculas,
-   usuarios ACTIVO, Jugador/Entrenador con datos únicos, bajas lógicas,
-   auditoría, sin Ids en pantalla, roles ADMINISTRADOR / OBSERVADOR).
-   Reglas de negocio (guía): marcadas como [REGLA n] en el script.
    ===================================================================== */
 
 USE MASTER
 GO
 
--- [CAMBIO] Si la base ya existe se borra para poder volver a ejecutar el script completo
 IF DB_ID('DBTORNEO') IS NOT NULL
 BEGIN
 	ALTER DATABASE DBTORNEO SET SINGLE_USER WITH ROLLBACK IMMEDIATE
@@ -23,7 +18,6 @@ GO
 USE DBTORNEO
 GO
 
--- [CAMBIO] Necesario para el índice filtrado de la REGLA 3 (SSMS ya lo trae activo, sqlcmd no)
 SET QUOTED_IDENTIFIER ON
 SET ANSI_NULLS ON
 GO
@@ -187,7 +181,7 @@ CREATE TABLE JUGADOR
 	IdJugador			INT IDENTITY (1,1)	NOT NULL,
 	IdEstatus			INT					NOT NULL,
 	IdEquipo			INT					NOT NULL,
-	IdUsuario			INT						NULL,	-- [CAMBIO] Antes NOT NULL: la app no captura una cuenta por jugador
+	IdUsuario			INT						NULL,
 	Nombre				NVARCHAR (80)		NOT NULL,
 	PrimerApellido		NVARCHAR (80)		NOT NULL,
 	SegundoApellido		NVARCHAR (80)			NULL,
@@ -222,7 +216,7 @@ CREATE TABLE ENTRENADOR
 	IdEntrenador		INT IDENTITY (1,1)	NOT NULL,
 	IdEstatus			INT					NOT NULL,
 	IdEquipo			INT					NOT NULL,
-	IdUsuario			INT						NULL,	-- [CAMBIO] Antes NOT NULL: la app no captura una cuenta por entrenador
+	IdUsuario			INT						NULL,	
 	Nombre				NVARCHAR (80)		NOT NULL,
 	PrimerApellido		NVARCHAR (80)		NOT NULL,
 	SegundoApellido		NVARCHAR (80)			NULL,
@@ -287,25 +281,21 @@ CREATE TABLE EQUIPO_PARTIDO
 );
 GO
 
--- [CAMBIO] RESTRICCIONES DE LAS REGLAS DE NEGOCIO
--- Respaldan en la base lo que los SP validan con mensajes
 
--- [REGLA 2 y 3] Cada equipo tiene un solo entrenador activo y cada entrenador representa a un solo equipo
--- (el entrenador tiene una sola columna IdEquipo y este índice evita dos entrenadores activos en el mismo equipo)
 CREATE UNIQUE INDEX UX_Entrenador_EquipoActivo ON ENTRENADOR (IdEquipo) WHERE IdEstatus = 1;
 GO
 
--- [REGLA 4] La fecha de fin del partido no puede ser anterior a la de inicio
+
 ALTER TABLE PARTIDO ADD CONSTRAINT CK_Partido_Fechas CHECK (FechaFin IS NULL OR FechaFin >= FechaInicio);
 GO
 
--- [REGLA 5] En cada partido participan dos equipos: uno LOCAL y uno VISITANTE, y no el mismo equipo dos veces
+
 ALTER TABLE EQUIPO_PARTIDO ADD CONSTRAINT UQ_EquipoPartido_Equipo UNIQUE (IdPartido, IdEquipo);
 ALTER TABLE EQUIPO_PARTIDO ADD CONSTRAINT UQ_EquipoPartido_Tipo   UNIQUE (IdPartido, IdTipoEquipo);
 ALTER TABLE EQUIPO_PARTIDO ADD CONSTRAINT CK_EquipoPartido_Goles  CHECK (Goles IS NULL OR Goles >= 0);
 GO
 
--- [REGLA 6] Una sola estadística por jugador en cada partido y valores válidos
+
 ALTER TABLE ESTADISTICA_JUGADOR ADD CONSTRAINT UQ_Estadistica_PartidoJugador UNIQUE (IdPartido, IdJugador);
 ALTER TABLE ESTADISTICA_JUGADOR ADD CONSTRAINT CK_Estadistica_Valores CHECK
 (
@@ -321,11 +311,7 @@ GO
 --INSERTS INICIALES
 
 -- Inserts tabla ROL
--- [CAMBIO] El PDF pide dos roles: ADMINISTRADOR (todo) y OBSERVADOR (sólo consulta).
---          La app valida el texto "ADMINISTRADOR" para permitir guardar, editar y eliminar.
--- [REGLA 7] Las reglas de negocio hablan de "entrenador" y "jugador"; se respetan los nombres del PDF:
---          ADMINISTRADOR = permisos del entrenador (registrar, gestionar y administrar todo)
---          OBSERVADOR    = permisos del jugador (sólo consulta de partidos y estadísticas)
+
 INSERT INTO ROL (Descripcion)
 VALUES	('ADMINISTRADOR'),
 		('OBSERVADOR');
@@ -339,8 +325,7 @@ VALUES	('ACTIVO'),
 GO
 
 -- Inserts tabla USUARIO
--- [CAMBIO] OBSERVADOR ahora usa el IdRol 2 (antes 3)
---          El login distingue mayúsculas: se entra con ADMIN / admin123 y OBSERVADOR / obs123
+
 INSERT INTO USUARIO (IdRol, IdEstatus, Cuenta, Contrasenia, FechaRegistro)
 VALUES	(1, 1, 'ADMIN', 'admin123', GETDATE()),
 		(2, 1, 'OBSERVADOR', 'obs123' , GETDATE());
@@ -372,8 +357,7 @@ VALUES	('ESTADIO 1'),
 		('ESTADIO 6');
 GO
 
--- [CAMBIO] Inserts tabla EQUIPO
--- Sin equipos el combo de Jugador/Entrenador sale vacío y no se puede registrar nada
+-- Inserts tabla EQUIPO
 INSERT INTO EQUIPO (IdEstatus, IdCategoria, Nombre, FechaRegistro, UsuarioRegistro)
 VALUES	(1, 3, 'HALCONES FC',		GETDATE(), 1),
 		(1, 3, 'LOBOS UNIDOS',		GETDATE(), 1),
@@ -390,9 +374,9 @@ CREATE OR ALTER PROCEDURE spUsuario (
     @IdRol              INT          = NULL,
     @Cuenta             NVARCHAR(30) = NULL,
     @Contrasenia        NVARCHAR(30) = NULL,
-    @TipoCuenta         NVARCHAR(20) = NULL,    -- [CAMBIO] Crear cuenta: 'JUGADOR' o 'ENTRENADOR'
-    @Dato               NVARCHAR(50) = NULL,    -- [CAMBIO] Crear cuenta: correo (jugador) o cédula (entrenador)
-    @Telefono           NVARCHAR(15) = NULL,    -- [CAMBIO] Crear cuenta: teléfono registrado de la persona
+    @TipoCuenta         NVARCHAR(20) = NULL,    
+    @Dato               NVARCHAR(50) = NULL,    
+    @Telefono           NVARCHAR(15) = NULL,    
     @IdUsuarioAuditor   INT          = NULL
 )
 AS
@@ -413,29 +397,28 @@ BEGIN
             VALUES (
                 @IdRol,
                 1,
-                TRIM(@Cuenta),      -- [CAMBIO] Sin UPPER: el login distingue mayúsculas y minúsculas
+                TRIM(@Cuenta),      
                 TRIM(@Contrasenia),
                 GETDATE(),
                 @IdUsuarioAuditor
             )
-            SELECT 'Usuario creado correctamente.' AS Mensaje, 'success' AS TipoMensaje         -- [CAMBIO] + TipoMensaje
+            SELECT 'Usuario creado correctamente.' AS Mensaje, 'success' AS TipoMensaje         
         END
         ELSE
         BEGIN
-            SELECT 'La cuenta ya existe.' AS Mensaje, 'warning' AS TipoMensaje                  -- [CAMBIO] + TipoMensaje
+            SELECT 'La cuenta ya existe.' AS Mensaje, 'warning' AS TipoMensaje                  
         END
     END
 
     -- 2. Leer un registro
     IF @Accion = 2
     BEGIN
-        SELECT IdUsuario, IdRol, IdEstatus, Cuenta, Contrasenia     -- [CAMBIO] Cuenta sin UPPER
+        SELECT IdUsuario, IdRol, IdEstatus, Cuenta, Contrasenia     
         FROM USUARIO
         WHERE IdUsuario = @IdUsuario
     END
 
     -- 3. Consulta general
-    -- [CAMBIO] Sólo usuarios ACTIVO y con la descripción del rol (JOIN) en lugar de Ids
     IF @Accion = 3
     BEGIN
         SELECT U.IdUsuario AS Id, U.Cuenta, R.Descripcion AS Rol
@@ -453,7 +436,7 @@ BEGIN
         BEGIN
             UPDATE USUARIO
             SET IdRol               = @IdRol,
-                Cuenta              = TRIM(@Cuenta),        -- [CAMBIO] Sin UPPER
+                Cuenta              = TRIM(@Cuenta),        
                 Contrasenia         = TRIM(@Contrasenia),
                 FechaModificacion   = GETDATE(),
                 UsuarioModificacion = @IdUsuarioAuditor
@@ -476,11 +459,9 @@ BEGIN
             UsuarioBaja = @IdUsuarioAuditor
         WHERE IdUsuario = @IdUsuario
 
-        SELECT 'Registro eliminado correctamente.' AS Mensaje, 'success' AS TipoMensaje         -- [CAMBIO] + TipoMensaje
+        SELECT 'Registro eliminado correctamente.' AS Mensaje, 'success' AS TipoMensaje         
     END
 
-    -- [CAMBIO] 6. Iniciar sesión (nueva)
-    -- COLLATE ..._CS_AS hace que "admin" y "ADMIN" sean distintos (sensible a mayúsculas)
     IF @Accion = 6
     BEGIN
         IF NOT EXISTS (SELECT 1 FROM USUARIO
@@ -489,7 +470,7 @@ BEGIN
         BEGIN
             SELECT 'Usuario o contraseña incorrectos.' AS Mensaje, 'danger' AS TipoMensaje
         END
-        -- Validar que el usuario esté en estatus ACTIVO
+        
         ELSE IF EXISTS (SELECT 1 FROM USUARIO
                         WHERE Cuenta      COLLATE Latin1_General_CS_AS = @Cuenta
                         AND   Contrasenia COLLATE Latin1_General_CS_AS = @Contrasenia
@@ -508,12 +489,6 @@ BEGIN
         END
     END
 
-    -- [CAMBIO] 7. Crear cuenta desde el login (nueva)
-    -- [REGLA 7] Entrenador -> rol ADMINISTRADOR (registra y gestiona todo)
-    --           Jugador    -> rol OBSERVADOR    (sólo consulta)
-    -- Para que nadie se dé permisos por su cuenta, la persona ya debe estar registrada y ACTIVA:
-    -- el entrenador se identifica con su cédula y teléfono, el jugador con su correo y teléfono.
-    -- La cuenta queda vinculada a su registro (IdUsuario) y cada persona sólo puede tener una.
     IF @Accion = 7
     BEGIN
         DECLARE @IdPersona INT, @IdUsuarioPersona INT, @IdRolCuenta INT, @IdNuevo INT
@@ -553,7 +528,7 @@ BEGIN
         BEGIN
             SELECT 'Esta persona ya tiene una cuenta.' AS Mensaje, 'warning' AS TipoMensaje
         END
-        -- No puede existir más de un usuario con la misma cuenta (sin importar mayúsculas)
+        
         ELSE IF EXISTS (SELECT 1 FROM USUARIO WHERE UPPER(TRIM(Cuenta)) = UPPER(TRIM(@Cuenta)))
         BEGIN
             SELECT 'La cuenta ya existe, elige otra.' AS Mensaje, 'warning' AS TipoMensaje
@@ -567,10 +542,10 @@ BEGIN
 
                 SET @IdNuevo = SCOPE_IDENTITY()
 
-                -- Auditoría: la cuenta se registró a sí misma desde el login
+                
                 UPDATE USUARIO SET UsuarioRegistro = @IdNuevo WHERE IdUsuario = @IdNuevo
 
-                -- Vincular la cuenta con su registro de entrenador o jugador
+                
                 IF @TipoCuenta = 'ENTRENADOR'
                     UPDATE ENTRENADOR
                     SET IdUsuario = @IdNuevo, FechaModificacion = GETDATE(), UsuarioModificacion = @IdNuevo
@@ -634,11 +609,9 @@ BEGIN
     END
 
     -- 3. Consulta general
-    -- [CAMBIO] Sólo equipos ACTIVO y con la categoría por JOIN.
-    --          La app usa esta consulta para el combo de equipos (columnas Id, Equipo, Categoria)
+    
     IF @Accion = 3
     BEGIN
-        -- [REGLA 2] Se muestra también el entrenador asignado al equipo
         SELECT E.IdEquipo AS Id, UPPER(E.Nombre) AS Equipo, C.Descripcion AS Categoria,
                ISNULL(NULLIF(UPPER(CONCAT_WS(' ', T.PrimerApellido, T.SegundoApellido, T.Nombre)), ''), 'SIN ENTRENADOR') AS Entrenador
         FROM EQUIPO E
@@ -670,7 +643,6 @@ BEGIN
     END
 
     -- 5. Eliminar (Baja lógica)
-    -- [REGLA 2] No se da de baja un equipo que todavía tiene jugadores o entrenador activos
     IF @Accion = 5
     BEGIN
         IF EXISTS (SELECT 1 FROM JUGADOR    WHERE IdEquipo = @IdEquipo AND IdEstatus = 1)
@@ -705,13 +677,13 @@ CREATE OR ALTER PROCEDURE spJugador (
     @FechaNacimiento    DATE         = NULL,
     @Correo             NVARCHAR(50) = NULL,
     @Telefono           NVARCHAR(15) = NULL,
-    @Buscar             NVARCHAR(80) = NULL,    -- [CAMBIO] Nuevo: texto de búsqueda de la consulta general
-    @IdUsuarioAuditor   INT          = NULL     -- [CAMBIO] Antes @UsuarioAuditor (la app manda @IdUsuarioAuditor)
+    @Buscar             NVARCHAR(80) = NULL,    
+    @IdUsuarioAuditor   INT          = NULL     
 )
 AS
 BEGIN
     -- 1. Crear un registro
-    -- [CAMBIO] Además del correo se valida el teléfono (el PDF pide ambos únicos)
+
     IF @Accion = 1
     BEGIN
         IF EXISTS (SELECT 1 FROM JUGADOR WHERE UPPER(TRIM(Correo)) = UPPER(TRIM(@Correo)))
@@ -722,7 +694,7 @@ BEGIN
         BEGIN
             SELECT 'El teléfono ya está ocupado por otro jugador.' AS Mensaje, 'warning' AS TipoMensaje
         END
-        -- [REGLA 2] El jugador pertenece a un único equipo, que debe existir y estar activo
+
         ELSE IF NOT EXISTS (SELECT 1 FROM EQUIPO WHERE IdEquipo = @IdEquipo AND IdEstatus = 1)
         BEGIN
             SELECT 'Selecciona un equipo válido.' AS Mensaje, 'warning' AS TipoMensaje
@@ -772,12 +744,11 @@ BEGIN
                FechaRegistro
         FROM JUGADOR
         WHERE IdJugador = @IdJugador
-        AND IdEstatus = 1      -- [CAMBIO] Un jugador dado de baja ya no se puede consultar para editar
+        AND IdEstatus = 1      
     END
 
     -- 3. Consulta general
-    -- [CAMBIO] Sólo jugadores ACTIVO, sin Ids en pantalla (equipo y categoría por JOIN),
-    --          nombre completo, fecha dd/mm/aaaa, edad y búsqueda por nombre, correo, teléfono o equipo
+    
     IF @Accion = 3
     BEGIN
         SELECT J.IdJugador AS Id,
@@ -803,7 +774,7 @@ BEGIN
     END
 
     -- 4. Modificar un registro
-    -- [CAMBIO] Además del correo se valida el teléfono
+    
     IF @Accion = 4
     BEGIN
         IF EXISTS (SELECT 1 FROM JUGADOR WHERE UPPER(TRIM(Correo)) = UPPER(TRIM(@Correo)) AND IdJugador != @IdJugador)
@@ -814,7 +785,7 @@ BEGIN
         BEGIN
             SELECT 'El teléfono ya está ocupado por otro jugador.' AS Mensaje, 'warning' AS TipoMensaje
         END
-        -- [REGLA 2] El jugador pertenece a un único equipo, que debe existir y estar activo
+        
         ELSE IF NOT EXISTS (SELECT 1 FROM EQUIPO WHERE IdEquipo = @IdEquipo AND IdEstatus = 1)
         BEGIN
             SELECT 'Selecciona un equipo válido.' AS Mensaje, 'warning' AS TipoMensaje
@@ -832,8 +803,7 @@ BEGIN
                 FechaModificacion   = GETDATE(),
                 UsuarioModificacion = @IdUsuarioAuditor
             WHERE IdJugador = @IdJugador
-            AND IdEstatus = 1  -- [CAMBIO] No se modifican jugadores dados de baja
-            -- [CAMBIO] Ya no se actualiza IdUsuario: la app no lo envía y quedaría en NULL
+            AND IdEstatus = 1  
 
             SELECT 'Registro modificado correctamente.' AS Mensaje, 'success' AS TipoMensaje
         END
@@ -866,13 +836,13 @@ CREATE OR ALTER PROCEDURE spEntrenador (
     @FechaNacimiento    DATE         = NULL,
     @Cedula             NVARCHAR(50) = NULL,
     @Telefono           NVARCHAR(15) = NULL,
-    @Buscar             NVARCHAR(80) = NULL,    -- [CAMBIO] Nuevo: texto de búsqueda de la consulta general
-    @IdUsuarioAuditor   INT          = NULL     -- [CAMBIO] Antes @UsuarioAuditor (la app manda @IdUsuarioAuditor)
+    @Buscar             NVARCHAR(80) = NULL,    
+    @IdUsuarioAuditor   INT          = NULL     
 )
 AS
 BEGIN
     -- 1. Crear un registro
-    -- [CAMBIO] Además de la cédula se valida el teléfono (el PDF pide ambos únicos)
+    
     IF @Accion = 1
     BEGIN
         IF EXISTS (SELECT 1 FROM ENTRENADOR WHERE UPPER(TRIM(Cedula)) = UPPER(TRIM(@Cedula)))
@@ -883,12 +853,12 @@ BEGIN
         BEGIN
             SELECT 'El teléfono ya está registrado con otro entrenador.' AS Mensaje, 'warning' AS TipoMensaje
         END
-        -- [REGLA 3] El entrenador representa a un solo equipo, que debe existir y estar activo
+        
         ELSE IF NOT EXISTS (SELECT 1 FROM EQUIPO WHERE IdEquipo = @IdEquipo AND IdEstatus = 1)
         BEGIN
             SELECT 'Selecciona un equipo válido.' AS Mensaje, 'warning' AS TipoMensaje
         END
-        -- [REGLA 2] Cada equipo tiene un solo entrenador asignado
+        
         ELSE IF EXISTS (SELECT 1 FROM ENTRENADOR WHERE IdEquipo = @IdEquipo AND IdEstatus = 1)
         BEGIN
             SELECT 'Ese equipo ya tiene un entrenador asignado.' AS Mensaje, 'warning' AS TipoMensaje
@@ -938,12 +908,10 @@ BEGIN
                FechaRegistro
         FROM ENTRENADOR
         WHERE IdEntrenador = @IdEntrenador
-        AND IdEstatus = 1      -- [CAMBIO] Un entrenador dado de baja ya no se puede consultar para editar
+        AND IdEstatus = 1      
     END
 
     -- 3. Consulta general
-    -- [CAMBIO] Sólo entrenadores ACTIVO, sin Ids en pantalla (equipo y categoría por JOIN),
-    --          nombre completo, fecha dd/mm/aaaa, edad y búsqueda por nombre, cédula, teléfono o equipo
     IF @Accion = 3
     BEGIN
         SELECT T.IdEntrenador AS Id,
@@ -969,7 +937,7 @@ BEGIN
     END
 
     -- 4. Modificar un registro
-    -- [CAMBIO] Además de la cédula se valida el teléfono
+    
     IF @Accion = 4
     BEGIN
         IF EXISTS (SELECT 1 FROM ENTRENADOR WHERE UPPER(TRIM(Cedula)) = UPPER(TRIM(@Cedula)) AND IdEntrenador != @IdEntrenador)
@@ -980,12 +948,12 @@ BEGIN
         BEGIN
             SELECT 'El teléfono ya está ocupado por otro entrenador.' AS Mensaje, 'warning' AS TipoMensaje
         END
-        -- [REGLA 3] El entrenador representa a un solo equipo, que debe existir y estar activo
+        
         ELSE IF NOT EXISTS (SELECT 1 FROM EQUIPO WHERE IdEquipo = @IdEquipo AND IdEstatus = 1)
         BEGIN
             SELECT 'Selecciona un equipo válido.' AS Mensaje, 'warning' AS TipoMensaje
         END
-        -- [REGLA 2] Cada equipo tiene un solo entrenador asignado
+        
         ELSE IF EXISTS (SELECT 1 FROM ENTRENADOR WHERE IdEquipo = @IdEquipo AND IdEstatus = 1 AND IdEntrenador != @IdEntrenador)
         BEGIN
             SELECT 'Ese equipo ya tiene un entrenador asignado.' AS Mensaje, 'warning' AS TipoMensaje
@@ -1003,8 +971,8 @@ BEGIN
                 FechaModificacion   = GETDATE(),
                 UsuarioModificacion = @IdUsuarioAuditor
             WHERE IdEntrenador = @IdEntrenador
-            AND IdEstatus = 1  -- [CAMBIO] No se modifican entrenadores dados de baja
-            -- [CAMBIO] Ya no se actualiza IdUsuario: la app no lo envía y quedaría en NULL
+            AND IdEstatus = 1  
+            
 
             SELECT 'Registro modificado correctamente.' AS Mensaje, 'success' AS TipoMensaje
         END
@@ -1033,12 +1001,12 @@ CREATE OR ALTER PROCEDURE spPartido (
     @FechaInicio        DATETIME     = NULL,
     @FechaFin           DATETIME     = NULL,
     @Resultado          NVARCHAR(30) = NULL,
-    @IdUsuarioAuditor   INT          = NULL     -- [CAMBIO] Antes @UsuarioAuditor, igual que los demás SP
+    @IdUsuarioAuditor   INT          = NULL     
 )
 AS
 BEGIN
     -- 1. Crear un nuevo registro
-    -- [REGLA 4] El partido lleva nombre, lugar (estadio), fecha de inicio y de finalización
+    
     IF @Accion = 1
     BEGIN
         IF EXISTS (SELECT 1 FROM PARTIDO WHERE UPPER(TRIM(Nombre)) = UPPER(TRIM(@Nombre)))
@@ -1075,7 +1043,7 @@ BEGIN
                 GETDATE(),
                 @IdUsuarioAuditor
             )
-            SELECT 'Partido creado correctamente.' AS Mensaje, 'success' AS TipoMensaje         -- [CAMBIO] + TipoMensaje
+            SELECT 'Partido creado correctamente.' AS Mensaje, 'success' AS TipoMensaje
         END
     END
 
@@ -1088,8 +1056,7 @@ BEGIN
     END
 
     -- 3. Consulta general
-    -- [CAMBIO] Sólo partidos ACTIVO y sin Ids en pantalla
-    -- [REGLA 5] Historial: lugar, fechas, equipo local, equipo visitante y resultado
+    
     IF @Accion = 3
     BEGIN
         SELECT P.IdPartido AS Id,
@@ -1151,7 +1118,7 @@ BEGIN
             UsuarioBaja = @IdUsuarioAuditor
         WHERE IdPartido = @IdPartido
 
-        SELECT 'Partido dado de baja correctamente.' AS Mensaje, 'success' AS TipoMensaje       -- [CAMBIO] + TipoMensaje
+        SELECT 'Partido dado de baja correctamente.' AS Mensaje, 'success' AS TipoMensaje
     END
 END
 GO
@@ -1171,24 +1138,24 @@ CREATE OR ALTER PROCEDURE spEstadisticaJugador (
 )
 AS
 BEGIN
-    -- [REGLA 6] Validaciones para registrar (1) y modificar (4) estadísticas
+    
     IF @Accion IN (1, 4)
     BEGIN
-        -- El jugador sólo tiene una estadística por partido
+        
         IF EXISTS (SELECT 1 FROM ESTADISTICA_JUGADOR WHERE IdPartido = @IdPartido AND IdJugador = @IdJugador
                    AND IdEstadisticaJugador != ISNULL(@IdEstadisticaJugador, 0))
         BEGIN
             SELECT 'Este jugador ya tiene estadísticas registradas en este partido.' AS Mensaje, 'warning' AS TipoMensaje
             RETURN
         END
-        -- El partido y el jugador deben estar activos
+        
         IF NOT EXISTS (SELECT 1 FROM PARTIDO WHERE IdPartido = @IdPartido AND IdEstatus = 1)
         OR NOT EXISTS (SELECT 1 FROM JUGADOR WHERE IdJugador = @IdJugador AND IdEstatus = 1)
         BEGIN
             SELECT 'Selecciona un partido y un jugador activos.' AS Mensaje, 'warning' AS TipoMensaje
             RETURN
         END
-        -- El equipo del jugador debe ser el local o el visitante de ese partido
+        
         IF NOT EXISTS (SELECT 1 FROM EQUIPO_PARTIDO EP
                        INNER JOIN JUGADOR J ON J.IdEquipo = EP.IdEquipo
                        WHERE EP.IdPartido = @IdPartido AND J.IdJugador = @IdJugador)
@@ -1196,7 +1163,7 @@ BEGIN
             SELECT 'El equipo del jugador no participa en este partido.' AS Mensaje, 'warning' AS TipoMensaje
             RETURN
         END
-        -- Minutos, goles, asistencias y tarjetas con valores válidos
+        
         IF ISNULL(@MinutosJugados, 0) NOT BETWEEN 0 AND 120
         OR ISNULL(@GolesAnotados, 0) < 0 OR ISNULL(@GolesAtajados, 0) < 0 OR ISNULL(@Asistencias, 0) < 0
         BEGIN
@@ -1233,7 +1200,7 @@ BEGIN
             ISNULL(@GolesAtajados, 0),
             ISNULL(@MinutosJugados, 0)
         )
-        SELECT 'Estadística registrada correctamente.' AS Mensaje, 'success' AS TipoMensaje         -- [CAMBIO] + TipoMensaje
+        SELECT 'Estadística registrada correctamente.' AS Mensaje, 'success' AS TipoMensaje
     END
 
     -- 2. Leer un registro específico
@@ -1245,7 +1212,7 @@ BEGIN
     END
 
     -- 3. Consulta general
-    -- [CAMBIO] Nombres de partido, jugador y equipo (JOIN) en lugar de Ids
+    
     IF @Accion = 3
     BEGIN
         SELECT EJ.IdEstadisticaJugador AS Id,
@@ -1290,7 +1257,7 @@ BEGIN
         DELETE FROM ESTADISTICA_JUGADOR
         WHERE IdEstadisticaJugador = @IdEstadisticaJugador
 
-        SELECT 'Estadística eliminada correctamente.' AS Mensaje, 'success' AS TipoMensaje      -- [CAMBIO] + TipoMensaje
+        SELECT 'Estadística eliminada correctamente.' AS Mensaje, 'success' AS TipoMensaje      
     END
 END
 GO
@@ -1306,24 +1273,24 @@ CREATE OR ALTER PROCEDURE spEquipoPartido (
 )
 AS
 BEGIN
-    -- [REGLA 5] Validaciones para registrar (1) y modificar (4) los equipos de un partido
+    
     IF @Accion IN (1, 4)
     BEGIN
-        -- El partido debe estar activo y el equipo también
+        
         IF NOT EXISTS (SELECT 1 FROM PARTIDO WHERE IdPartido = @IdPartido AND IdEstatus = 1)
         OR NOT EXISTS (SELECT 1 FROM EQUIPO  WHERE IdEquipo  = @IdEquipo  AND IdEstatus = 1)
         BEGIN
             SELECT 'Selecciona un partido y un equipo activos.' AS Mensaje, 'warning' AS TipoMensaje
             RETURN
         END
-        -- El mismo equipo no puede estar dos veces en el partido
+        
         IF EXISTS (SELECT 1 FROM EQUIPO_PARTIDO WHERE IdPartido = @IdPartido AND IdEquipo = @IdEquipo
                    AND IdEquipoPartido != ISNULL(@IdEquipoPartido, 0))
         BEGIN
             SELECT 'Este equipo ya está registrado en este partido.' AS Mensaje, 'warning' AS TipoMensaje
             RETURN
         END
-        -- Sólo un LOCAL y un VISITANTE por partido (máximo dos equipos)
+        
         IF EXISTS (SELECT 1 FROM EQUIPO_PARTIDO WHERE IdPartido = @IdPartido AND IdTipoEquipo = @IdTipoEquipo
                    AND IdEquipoPartido != ISNULL(@IdEquipoPartido, 0))
         BEGIN
@@ -1353,7 +1320,7 @@ BEGIN
             @IdTipoEquipo,
             @Goles
         )
-        SELECT 'Equipo asignado al partido correctamente.' AS Mensaje, 'success' AS TipoMensaje     -- [CAMBIO] + TipoMensaje
+        SELECT 'Equipo asignado al partido correctamente.' AS Mensaje, 'success' AS TipoMensaje
     END
 
     -- 2. Leer un registro específico
@@ -1365,7 +1332,7 @@ BEGIN
     END
 
     -- 3. Consulta general
-    -- [CAMBIO] Nombres de partido, equipo y tipo (LOCAL / VISITANTE) en lugar de Ids
+    
     IF @Accion = 3
     BEGIN
         SELECT EP.IdEquipoPartido AS Id,
@@ -1398,17 +1365,15 @@ BEGIN
     -- 5. Eliminar
     IF @Accion = 5
     BEGIN
-        -- Se guarda el partido antes de borrar para recalcular su resultado
+        
         SELECT @IdPartido = IdPartido FROM EQUIPO_PARTIDO WHERE IdEquipoPartido = @IdEquipoPartido
 
         DELETE FROM EQUIPO_PARTIDO
         WHERE IdEquipoPartido = @IdEquipoPartido
 
-        SELECT 'Registro eliminado correctamente.' AS Mensaje, 'success' AS TipoMensaje         -- [CAMBIO] + TipoMensaje
+        SELECT 'Registro eliminado correctamente.' AS Mensaje, 'success' AS TipoMensaje         
     END
 
-    -- [REGLA 5] Resultado final: cuando el partido tiene LOCAL y VISITANTE con goles,
-    -- se guarda en PARTIDO.Resultado como "2 - 1" (goles local - goles visitante) para el historial
     IF @Accion IN (1, 4, 5)
     BEGIN
         UPDATE P
@@ -1423,8 +1388,7 @@ END
 GO
 
 
--- [CAMBIO] spCatalogos (nuevo)
--- Listas para los combos (ddl) de la app. Regresa siempre IdCatalogo y Descripcion
+
 CREATE OR ALTER PROCEDURE spCatalogos (
     @Accion     INT = NULL,
     @IdFiltro   INT = NULL
